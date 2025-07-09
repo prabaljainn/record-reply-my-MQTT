@@ -24,6 +24,9 @@ class MQTTSubscriber:
     
     def __init__(self, config_file: str = "config.yml"):
         """Initialize the MQTT subscriber with configuration."""
+        # Setup logging first, before any logging calls
+        self._setup_logging()
+        
         self.config = self._load_config(config_file)
         self.mqtt_config = self.config["mqtt"]
         self.storage_file = self._get_next_filename(self.config["storage"]["file_path"])
@@ -32,9 +35,6 @@ class MQTTSubscriber:
         self.buffer: List[Dict[str, Any]] = []
         self.buffer_size = 1000
         self.message_count = 0
-        
-        # Setup logging
-        self._setup_logging()
         
         # Setup MQTT client
         self.client = self._setup_mqtt_client()
@@ -108,13 +108,19 @@ class MQTTSubscriber:
     
     def _setup_logging(self):
         """Setup logging configuration."""
+        # Clear any existing handlers
+        for handler in logging.root.handlers[:]:
+            logging.root.removeHandler(handler)
+        
+        # Configure logging
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(levelname)s - %(message)s",
             handlers=[
                 logging.FileHandler("mqtt_subscriber.log"),
                 logging.StreamHandler(sys.stdout)
-            ]
+            ],
+            force=True  # Force reconfiguration
         )
     
     def _setup_mqtt_client(self) -> mqtt.Client:

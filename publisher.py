@@ -25,6 +25,9 @@ class MQTTPublisher:
     
     def __init__(self, config_file: str = "config.yml", storage_file: str = None):
         """Initialize the MQTT publisher with configuration."""
+        # Setup logging first, before any logging calls
+        self._setup_logging()
+        
         self.config = self._load_config(config_file)
         self.publish_config = self.config["publish"]
         
@@ -33,9 +36,6 @@ class MQTTPublisher:
             self.storage_file = storage_file
         else:
             self.storage_file = self._get_latest_recording()
-        
-        # Setup logging
-        self._setup_logging()
         
         # Setup MQTT client
         self.client = self._setup_mqtt_client()
@@ -93,13 +93,19 @@ class MQTTPublisher:
     
     def _setup_logging(self):
         """Setup logging configuration."""
+        # Clear any existing handlers
+        for handler in logging.root.handlers[:]:
+            logging.root.removeHandler(handler)
+        
+        # Configure logging
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(levelname)s - %(message)s",
             handlers=[
                 logging.FileHandler("mqtt_publisher.log"),
                 logging.StreamHandler(sys.stdout)
-            ]
+            ],
+            force=True  # Force reconfiguration
         )
     
     def _setup_mqtt_client(self) -> mqtt.Client:
