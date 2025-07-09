@@ -1,0 +1,18 @@
+publish:
+  broker: "mqtt.example.com"
+  port: 8883
+  username: "your_username"
+  password: "your_password"
+  tls: true  # Enable TLS encryption
+  validate_certificate: false  # Set to true for production
+
+storage:
+  file_path: "mqtt_messages.json"
+
+mqtt:
+  broker: "mqtt.example.com"
+  port: 8883
+  username: "your_username"
+  password: "your_password"
+  tls: true  # Enable TLS encryption
+  validate_certificate: false  # Set to true for production

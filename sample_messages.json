@@ -1,0 +1,5 @@
+{"topic": "sensors/temperature", "payload": "23.5", "timestamp": 1699123456.123}
+{"topic": "sensors/humidity", "payload": "65.2", "timestamp": 1699123457.456}
+{"topic": "devices/light/status", "payload": "on", "timestamp": 1699123458.789}
+{"topic": "sensors/pressure", "payload": "1013.25", "timestamp": 1699123459.012}
+{"topic": "devices/fan/speed", "payload": "75", "timestamp": 1699123460.345} 
