@@ -15,17 +15,24 @@ import ssl
 import sys
 import signal
 import os
-from typing import Dict, Any, Iterator
+import glob
+import argparse
+from typing import Dict, Any, Iterator, List
 
 
 class MQTTPublisher:
     """MQTT Publisher that replays recorded messages."""
     
-    def __init__(self, config_file: str = "config.yml"):
+    def __init__(self, config_file: str = "config.yml", storage_file: str = None):
         """Initialize the MQTT publisher with configuration."""
         self.config = self._load_config(config_file)
         self.publish_config = self.config["publish"]
-        self.storage_file = self.config["storage"]["file_path"]
+        
+        # Use provided storage file or determine from existing recordings
+        if storage_file:
+            self.storage_file = storage_file
+        else:
+            self.storage_file = self._get_latest_recording()
         
         # Setup logging
         self._setup_logging()
@@ -58,6 +65,31 @@ class MQTTPublisher:
         except Exception as e:
             logging.error(f"Failed to load configuration: {e}")
             sys.exit(1)
+    
+    def _get_latest_recording(self) -> str:
+        """Find the latest recording file or use config default."""
+        # Look for mqtt_record_*.json files
+        pattern = "mqtt_record_*.json"
+        recording_files = glob.glob(pattern)
+        
+        if recording_files:
+            # Sort by modification time, newest first
+            recording_files.sort(key=os.path.getmtime, reverse=True)
+            latest_file = recording_files[0]
+            logging.info(f"Using latest recording: {latest_file}")
+            return latest_file
+        else:
+            # Fall back to config file path
+            config_file = self.config["storage"]["file_path"]
+            logging.info(f"No mqtt_record_*.json files found, using config file: {config_file}")
+            return config_file
+    
+    def list_available_recordings(self) -> List[str]:
+        """List all available recording files."""
+        pattern = "mqtt_record_*.json"
+        recording_files = glob.glob(pattern)
+        recording_files.sort(key=lambda x: int(x.split('_')[2].split('.')[0]))
+        return recording_files
     
     def _setup_logging(self):
         """Setup logging configuration."""
@@ -142,6 +174,7 @@ class MQTTPublisher:
         """Start the MQTT publisher and replay messages."""
         try:
             logging.info("Starting MQTT publisher...")
+            logging.info(f"Replaying messages from: {self.storage_file}")
             
             # Connect to broker
             self.client.connect(
@@ -218,9 +251,43 @@ class MQTTPublisher:
 
 def main():
     """Main function to run the MQTT publisher."""
+    parser = argparse.ArgumentParser(description="MQTT Message Publisher and Replayer")
+    parser.add_argument(
+        "--file", "-f", 
+        type=str, 
+        help="Specific recording file to replay (e.g., mqtt_record_1.json)"
+    )
+    parser.add_argument(
+        "--list", "-l", 
+        action="store_true", 
+        help="List available recording files"
+    )
+    
+    args = parser.parse_args()
+    
     try:
         publisher = MQTTPublisher()
+        
+        if args.list:
+            recordings = publisher.list_available_recordings()
+            if recordings:
+                print("Available recording files:")
+                for i, recording in enumerate(recordings, 1):
+                    file_size = os.path.getsize(recording)
+                    file_time = time.ctime(os.path.getmtime(recording))
+                    print(f"  {i}. {recording} ({file_size:,} bytes, {file_time})")
+            else:
+                print("No recording files found.")
+            return
+        
+        if args.file:
+            if not os.path.exists(args.file):
+                print(f"Error: File '{args.file}' not found.")
+                sys.exit(1)
+            publisher.storage_file = args.file
+        
         publisher.start()
+        
     except KeyboardInterrupt:
         logging.info("Received keyboard interrupt, shutting down...")
     except Exception as e:

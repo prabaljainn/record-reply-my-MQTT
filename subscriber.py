@@ -15,6 +15,7 @@ import ssl
 import sys
 import signal
 import os
+import glob
 from typing import Dict, List, Any
 
 
@@ -25,7 +26,7 @@ class MQTTSubscriber:
         """Initialize the MQTT subscriber with configuration."""
         self.config = self._load_config(config_file)
         self.mqtt_config = self.config["mqtt"]
-        self.storage_file = self.config["storage"]["file_path"]
+        self.storage_file = self._get_next_filename(self.config["storage"]["file_path"])
         
         # Message buffering
         self.buffer: List[Dict[str, Any]] = []
@@ -61,6 +62,49 @@ class MQTTSubscriber:
         except Exception as e:
             logging.error(f"Failed to load configuration: {e}")
             sys.exit(1)
+    
+    def _get_next_filename(self, base_filename: str) -> str:
+        """Generate the next incremental filename."""
+        # Extract directory, base name, and extension
+        dir_path = os.path.dirname(base_filename) or "."
+        base_name = os.path.basename(base_filename)
+        
+        # Split filename and extension
+        if '.' in base_name:
+            name_part, ext = base_name.rsplit('.', 1)
+            ext = f".{ext}"
+        else:
+            name_part = base_name
+            ext = ""
+        
+        # Find existing files with pattern mqtt_record_*.json
+        pattern = os.path.join(dir_path, "mqtt_record_*.json")
+        existing_files = glob.glob(pattern)
+        
+        # Extract numbers from existing files
+        existing_numbers = []
+        for file_path in existing_files:
+            filename = os.path.basename(file_path)
+            if filename.startswith("mqtt_record_") and filename.endswith(".json"):
+                try:
+                    # Extract number from mqtt_record_X.json
+                    number_str = filename[12:-5]  # Remove "mqtt_record_" and ".json"
+                    if number_str.isdigit():
+                        existing_numbers.append(int(number_str))
+                except (ValueError, IndexError):
+                    continue
+        
+        # Find the next available number
+        next_number = 1
+        if existing_numbers:
+            next_number = max(existing_numbers) + 1
+        
+        # Generate new filename
+        new_filename = f"mqtt_record_{next_number}.json"
+        new_filepath = os.path.join(dir_path, new_filename)
+        
+        logging.info(f"Recording to: {new_filepath}")
+        return new_filepath
     
     def _setup_logging(self):
         """Setup logging configuration."""
@@ -158,6 +202,7 @@ class MQTTSubscriber:
         """Start the MQTT subscriber."""
         try:
             logging.info("Starting MQTT subscriber...")
+            logging.info(f"Messages will be saved to: {self.storage_file}")
             self.client.connect(
                 self.mqtt_config["broker"], 
                 self.mqtt_config["port"], 

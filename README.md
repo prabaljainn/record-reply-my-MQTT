@@ -1,11 +1,13 @@
-# record-reply-my-MQTT
+# Mock-my-MQTT 🚀
 
 A powerful Python tool for recording and replaying MQTT message streams with precise timing reproduction. Perfect for testing, debugging, and simulating IoT environments.
 
 ## ✨ Features
 
 - **📡 Universal Recording**: Subscribe to all MQTT topics (`#`) and capture every message
+- **🔢 Auto-Incremental Files**: Automatically creates `mqtt_record_1.json`, `mqtt_record_2.json`, etc.
 - **⏱️ Precise Timing**: Replay messages with exact original timing intervals
+- **🎯 Flexible Replay**: Choose specific recordings or automatically use the latest
 - **🔒 Secure Connections**: Full TLS/SSL support with certificate validation options
 - **💾 Efficient Storage**: Buffered writes with configurable batch sizes for optimal performance
 - **🛡️ Robust Error Handling**: Graceful shutdowns, connection recovery, and comprehensive logging
@@ -64,17 +66,29 @@ python subscriber.py
 The subscriber will:
 - Connect to your MQTT broker
 - Subscribe to all topics (`#`)
-- Save messages to JSON file with timestamps
+- **Automatically create incremental files** (`mqtt_record_1.json`, `mqtt_record_2.json`, etc.)
+- Save messages with timestamps for precise replay
 - Provide real-time progress updates
 
 #### 📤 Replaying Messages
-Replay the captured messages with original timing:
+
+**Replay the latest recording:**
 ```bash
 python publisher.py
 ```
 
+**Replay a specific recording:**
+```bash
+python publisher.py --file mqtt_record_3.json
+```
+
+**List all available recordings:**
+```bash
+python publisher.py --list
+```
+
 The publisher will:
-- Read messages from the JSON file
+- Automatically use the latest recording (if no file specified)
 - Connect to the target MQTT broker
 - Replay messages with precise timing intervals
 - Maintain original message order and frequency
@@ -122,11 +136,33 @@ Mock-my-MQTT/
 
 ## 🔧 Advanced Features
 
+### Auto-Incremental Files
+Each recording session creates a new file:
+```
+mqtt_record_1.json  # First recording
+mqtt_record_2.json  # Second recording
+mqtt_record_3.json  # Third recording
+```
+
 ### Message Format
 Messages are stored in JSON Lines format:
 ```json
 {"topic": "sensors/temperature", "payload": "23.5", "timestamp": 1699123456.123}
 {"topic": "sensors/humidity", "payload": "65.2", "timestamp": 1699123457.456}
+```
+
+### Publisher Command Options
+```bash
+# Replay latest recording
+python publisher.py
+
+# Replay specific recording
+python publisher.py --file mqtt_record_2.json
+python publisher.py -f mqtt_record_2.json
+
+# List all recordings with details
+python publisher.py --list
+python publisher.py -l
 ```
 
 ### Logging
